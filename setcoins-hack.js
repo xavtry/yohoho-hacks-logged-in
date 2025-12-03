@@ -1,36 +1,31 @@
-/* This code is copyright of Faav © */
+/*  Coin setter – works on any host that fulfils the two conditions above */
 (async () => {
-    const sessionId = localStorage.sessionId; // get session id to use the api
-    const coinsSet = prompt("Set your coins to:"); // get coins to set to
-    const apiURL = (endpoint) => `https://s.${location.hostname}/${endpoint}?s=${sessionId}`; // get endpoints urls
-    var userStats = {
-        "gamesStarted": 0,
-        "coinsOwned": 0,
-        "playerSkin": 0,
-        "playerPet": 0,
-        "playerXP": 0,
-        "unlockedSkins": [1],
-        "unlockedPets": [1],
-        "playerPetLevel": 1,
-        "lastGameTime": 0,
-        "lastKills": 0,
-        "lastScore": 0,
-        "totalGameTime": 0,
-        "totalKills": 0,
-        "totalScore": 0,
-        "totalWins": 0,
-        "bestGameTime": 0,
-        "bestKills": 0,
-        "bestScore": 0,
-        "abBotSkillLevel": 1
-    }; // default stats
-    const userStatsAPI = await fetch(apiURL("login")); // fetch user stats
-    const userStatsStatus = userStatsAPI.status;
-    if (userStatsStatus == 200) userStats = JSON.parse('{'+(await userStatsAPI.text()).split('{')[1]); // set correct user stats
+    const sid = localStorage.sessionId;
+    if (!sid) return alert('No session id found – reload the game first.');
 
-    userStats.coinsOwned = Number(coinsSet); // set coins to desired amount
+    const raw = prompt('Set your coins to:');
+    const coins = Number(raw);
+    if (!Number.isFinite(coins) || coins < 0)
+        return alert('Positive number required.');
 
-    fetch(apiURL("save"), {method: "POST", body: JSON.stringify(userStats)}); // save to account
-    location.reload(); // reload page to see changes
+    const api = ep => `https://s.${location.hostname}/${ep}?s=${sid}`;
+
+    /* fetch current save */
+    const login = await fetch(api('login'));
+    if (!login.ok) return alert('Could not reach /login endpoint.');
+    const stats = await login.json();          // server already returns JSON
+
+    /* patch only the coin field */
+    stats.coinsOwned = coins;
+
+    /* push back */
+    const save = await fetch(api('save'), {
+        method : 'POST',
+        body   : JSON.stringify(stats),
+        headers: { 'Content-Type': 'application/json' }
+    });
+    if (!save.ok) return alert('Save failed – try again.');
+
+    alert('Coins updated – reloading…');
+    location.reload();
 })();
-/* This code is copyright of Faav © */
